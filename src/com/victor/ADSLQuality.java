@@ -5,15 +5,7 @@
  */
 package com.victor;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
@@ -21,20 +13,22 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
 /**
  * @author Victor
  */
 public class ADSLQuality {
 
-    String dbName;
-    int segundosIntervalo;
-    mySQL mysql;
+	private static final Logger _log = Logger.getLogger(ADSLQuality.class.getName());
+    private mySQL mysql;
+    private SqlLite sqlite;
 
     public ADSLQuality(String dbName, int segundosIntervalo) {
 
-        this.dbName = dbName;
-        this.segundosIntervalo = segundosIntervalo;
         this.mysql = new mySQL();
+        sqlite = new SqlLite(dbName);
 
         new Timer().schedule(new TimerTask() {
             @Override
@@ -83,11 +77,12 @@ public class ADSLQuality {
                     if (m.find()) {
                         datos[5] = Integer.parseInt(m.group(1));
                     }
-                    guardaDatos(datos);
+                    
+                    sqlite.guardaDatos(datos);
                     mysql.guardaDatosMySQL(datos);
 
                 } catch (IOException ex) {
-                    Logger.getLogger(ADSLQuality.class.getName()).log(Level.SEVERE, null, ex);
+                    _log.log(Level.SEVERE, null, ex);
                 }
             }
         }, 1000, (long) (segundosIntervalo * 1000));
@@ -106,51 +101,6 @@ public class ADSLQuality {
 
     }
 
-    void guardaDatos(int[] datos) {
-
-        try {
-
-            // load the sqlite-JDBC driver using the current class loader
-            Class.forName("org.sqlite.JDBC");
-
-            Connection connection = null;
-            try {
-                // create a database connection
-                connection = DriverManager.getConnection("jdbc:sqlite:" + System.getProperty("user.home") + "\\" + dbName);
-                connection.createStatement().executeUpdate("CREATE TABLE IF NOT EXISTS datos (" +
-                        "id INTEGER PRIMARY KEY," +
-                        "fecha DATETIME DEFAULT CURRENT_TIMESTAMP," +
-                        "download INTEGER," +
-                        "upload INTEGER," +
-                        "attdownrate INTEGER," +
-                        "attuprate INTEGER," +
-                        "downpower INTEGER," +
-                        "uppower INTEGER)");
-                PreparedStatement st = connection.prepareStatement("INSERT INTO datos (download,upload,attdownrate,attuprate,downpower,uppower) VALUES (?,?,?,?,?,?)");
-                for (int i = 0; i < datos.length; i++) {
-                    st.setInt(i + 1, datos[i]);
-                }
-                st.executeUpdate();
-                System.out.format("%30s ---> %5d | %5d | %5d | %5d | %5d | %5d %n", new Date().toString(), datos[0], datos[1], datos[2], datos[3], datos[4], datos[5]);
-            } catch (SQLException e) {
-                // if the error message is "out of memory",
-                // it probably means no database file is found
-                System.err.println(e.getMessage());
-            } finally {
-                try {
-                    if (connection != null) {
-                        connection.close();
-                    }
-                } catch (SQLException e) {
-                    // connection close failed.
-                    System.err.println(e.getMessage());
-                }
-            }
-
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(ADSLQuality.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
+    
 
 }
