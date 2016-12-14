@@ -15,6 +15,8 @@ import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
+import java.nio.charset.StandardCharsets;
+
 
 import javax.swing.JOptionPane;
 
@@ -49,11 +51,13 @@ public class mySQL {
 				preferences.get("contrasenha", null)).toString();
 
 		//Check for driver
+		/*
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 		} catch (ClassNotFoundException e) {
 			_log.log(Level.SEVERE, "Driver no encontrado", e);
 		}
+		*/
 
 	}
 
@@ -62,9 +66,9 @@ public class mySQL {
 		int ip_id = 0;
 		String ip = "localhost";
 
-		try {
+//		try {
 
-			Class.forName("com.mysql.jdbc.Driver");
+			//Class.forName("com.mysql.jdbc.Driver");
 
 			Connection connection = null;
 			PreparedStatement stmt;
@@ -84,9 +88,18 @@ public class mySQL {
 					_log.log(Level.SEVERE,null, e);
 				}
 
+				String hostname = "localhost";
+				try {
+					Process proc = Runtime.getRuntime().exec("hostname");
+                        		BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream(),StandardCharsets.UTF_8));
+					hostname = in.readLine();
+				} catch(IOException e) {
+					_log.log(Level.SEVERE, null, e);
+				}
+				
 				stmt = connection.prepareStatement("SELECT id FROM ip WHERE ip = ? AND name = ?");
 				stmt.setString(1, ip);
-				stmt.setString(2, InetAddress.getLocalHost().getHostName());
+				stmt.setString(2, hostname);
 				rs = stmt.executeQuery();
 
 				if (rs.next()) {
@@ -97,7 +110,8 @@ public class mySQL {
 					stmt = connection.prepareStatement("INSERT INTO ip (ip,name) VALUES (?,?)",
 							Statement.RETURN_GENERATED_KEYS);
 					stmt.setString(1, ip);
-					stmt.setString(2, InetAddress.getLocalHost().getHostName());
+					//stmt.setString(2, InetAddress.getLocalHost().getHostName());
+					stmt.setString(2, hostname);
 					stmt.executeUpdate();
 					rs = stmt.getGeneratedKeys();
 					if (rs.next()) {
@@ -122,9 +136,9 @@ public class mySQL {
 				// it probably means no database file is found
 				_log.log(Level.SEVERE,null, e);
 				 preferences.get("servidor", null);
-			} catch (UnknownHostException e) {
-				_log.log(Level.SEVERE,null, e);
-				preferences.get("servidor", null);
+//			} catch (UnknownHostException e) {
+//				_log.log(Level.SEVERE,null, e);
+//				preferences.get("servidor", null);
 			} finally {
 				try {
 					if (connection != null) {
@@ -136,9 +150,9 @@ public class mySQL {
 				}
 			}
 
-		} catch (ClassNotFoundException ex) {
-			_log.log(Level.SEVERE, "Driver no encontrado", ex);
-		}
+//		} catch (ClassNotFoundException ex) {
+//			_log.log(Level.SEVERE, "Driver no encontrado", ex);
+//		}
 
 	}
 

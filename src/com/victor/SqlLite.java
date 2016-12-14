@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.io.File;
 
 public class SqlLite {
 
@@ -14,7 +15,7 @@ public class SqlLite {
 	private final String connectionString;
 
 	public SqlLite(String dbName) {
-		connectionString = "jdbc:sqlite:" + System.getProperty("user.home") + "\\" + dbName;
+		connectionString = "jdbc:sqlite:" + System.getProperty("user.home") + File.separator + dbName;
 	}
 
 	void guardaDatos(int[] datos) {
