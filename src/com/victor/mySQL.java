@@ -25,27 +25,28 @@ public class mySQL {
 
 	private static final Logger _log = Logger.getLogger(mySQL.class.getName());
 	private String connectionString;
-
+	private Preferences preferences = Preferences.userNodeForPackage(mySQL.class);
+	
 	public mySQL() {
 
 		// Read connection data from preferences
-		Preferences preferences = Preferences.userNodeForPackage(mySQL.class);
-		if (preferences.get("servidor", null) == null || preferences.get("contraseña", null) == null) {
+		
+		if (preferences.get("servidor", null) == null || preferences.get("contrasenha", null) == null) {
 			preferences.put("servidor",
-					JOptionPane.showInputDialog(null, "Configuración", "Servidor MySQL", JOptionPane.QUESTION_MESSAGE));
+					JOptionPane.showInputDialog(null, "Servidor MySQL","Configuracion", JOptionPane.QUESTION_MESSAGE));
 			preferences.put("puerto",
-					JOptionPane.showInputDialog(null, "Configuración", "Puerto", JOptionPane.QUESTION_MESSAGE));
+					JOptionPane.showInputDialog(null, "Puerto", "Configuracion", JOptionPane.QUESTION_MESSAGE));
 			preferences.put("usuario",
-					JOptionPane.showInputDialog(null, "Configuración", "Usuario", JOptionPane.QUESTION_MESSAGE));
-			preferences.put("contraseña",
-					JOptionPane.showInputDialog(null, "Configuración", "Contraseña", JOptionPane.QUESTION_MESSAGE));
+					JOptionPane.showInputDialog(null, "Usuario","Configuracion", JOptionPane.QUESTION_MESSAGE));
+			preferences.put("contrasenha",
+					JOptionPane.showInputDialog(null, "Contrasenha", "Configuracion", JOptionPane.QUESTION_MESSAGE));
 		}
 
 		connectionString = String.format("jdbc:mysql://%1$s:%2$s/adsl?user=%3$s&password=%4$s",
 				preferences.get("servidor", "localhost"), 
-				preferences.get("puerto", "3360"),
+				preferences.get("puerto", "3306"),
 				preferences.get("usuario", null), 
-				preferences.get("contraseña", null)).toString();
+				preferences.get("contrasenha", null)).toString();
 
 		//Check for driver
 		try {
@@ -120,8 +121,10 @@ public class mySQL {
 				// if the error message is "out of memory",
 				// it probably means no database file is found
 				_log.log(Level.SEVERE,null, e);
+				 preferences.get("servidor", null);
 			} catch (UnknownHostException e) {
 				_log.log(Level.SEVERE,null, e);
+				preferences.get("servidor", null);
 			} finally {
 				try {
 					if (connection != null) {

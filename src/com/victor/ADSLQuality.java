@@ -10,8 +10,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.swing.JOptionPane;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,11 +27,17 @@ public class ADSLQuality {
 	private static final Logger _log = Logger.getLogger(ADSLQuality.class.getName());
     private mySQL mysql;
     private SqlLite sqlite;
+    private Preferences preferences = Preferences.userNodeForPackage(mySQL.class);
 
     public ADSLQuality(String dbName, int segundosIntervalo) {
 
         this.mysql = new mySQL();
         sqlite = new SqlLite(dbName);
+        
+        if (preferences.get("router", null) == null) {
+			preferences.put("router",
+					JOptionPane.showInputDialog(null, "IP Router","Configuracion", JOptionPane.QUESTION_MESSAGE));
+        }
 
         new Timer().schedule(new TimerTask() {
             @Override
@@ -37,7 +46,7 @@ public class ADSLQuality {
                     String login = "vodafone:vodafone";
                     String base64login = javax.xml.bind.DatatypeConverter.printBase64Binary(login.getBytes());
                     Document doc = Jsoup
-                            .connect("http://192.168.0.1/es_ES/diag.html")
+                            .connect("http://" + preferences.get("router", "192.168.0.1") + "/es_ES/diag.html")
                             .header("Authorization", "Basic " + base64login)
                             .get();
 
