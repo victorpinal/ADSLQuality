@@ -90,9 +90,11 @@ public class ADSLQuality {
                     sqlite.guardaDatos(datos);
                     mysql.guardaDatosMySQL(datos);
 
-                } catch (IOException ex) {
-                	preferences.put("router",null);
+                } catch (IOException ex) {                	
                     _log.log(Level.SEVERE, null, ex);
+                } catch (Exception ex) {
+                	preferences.put("router",null);
+                	_log.log(Level.SEVERE, null, ex);
                 }
             }
         }, 1000, (long) (segundosIntervalo * 1000));
