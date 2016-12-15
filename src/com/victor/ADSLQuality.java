@@ -91,6 +91,7 @@ public class ADSLQuality {
                     mysql.guardaDatosMySQL(datos);
 
                 } catch (IOException ex) {
+                	preferences.put("router",null);
                     _log.log(Level.SEVERE, null, ex);
                 }
             }
