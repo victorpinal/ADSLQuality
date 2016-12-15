@@ -93,7 +93,7 @@ public class ADSLQuality {
                 } catch (IOException ex) {                	
                     _log.log(Level.SEVERE, null, ex);
                 } catch (Exception ex) {
-                	preferences.put("router",null);
+                	preferences.remove("router");
                 	_log.log(Level.SEVERE, null, ex);
                 }
             }

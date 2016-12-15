@@ -135,7 +135,7 @@ public class mySQL {
 				// if the error message is "out of memory",
 				// it probably means no database file is found
 				_log.log(Level.SEVERE,null, e);
-				 preferences.get("servidor", null);
+				 preferences.remove("servidor");
 //			} catch (UnknownHostException e) {
 //				_log.log(Level.SEVERE,null, e);
 //				preferences.get("servidor", null);
