@@ -36,8 +36,8 @@ public class ADSLQuality {
         
         if (preferences.get("router", null) == null) {
 			preferences.put("router",
-					JOptionPane.showInputDialog(null, "IP Router","Configuracion", JOptionPane.QUESTION_MESSAGE));
-        }
+					JOptionPane.showInputDialog(null, "Url estadisticas router DSL","Configuracion", JOptionPane.QUESTION_MESSAGE));
+        }        
 
         new Timer().schedule(new TimerTask() {
             @Override
@@ -46,7 +46,7 @@ public class ADSLQuality {
                     String login = "vodafone:vodafone";
                     String base64login = javax.xml.bind.DatatypeConverter.printBase64Binary(login.getBytes());
                     Document doc = Jsoup
-                            .connect("http://" + preferences.get("router", "192.168.0.1") + "/es_ES/diag.html")
+                            .connect(preferences.get("router", "http://192.168.0.1/es_ES/diag.html"))
                             .header("Authorization", "Basic " + base64login)
                             .get();
 
