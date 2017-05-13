@@ -131,7 +131,7 @@ public class mySQL {
 					stmt.executeUpdate();
 				}
 
-			} catch (SQLException e) {
+			} catch (Exception e) {
 				// if the error message is "out of memory",
 				// it probably means no database file is found
 				_log.log(Level.SEVERE,null, e);
