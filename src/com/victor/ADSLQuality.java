@@ -5,7 +5,6 @@
  */
 package com.victor;
 
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
@@ -35,11 +34,13 @@ public class ADSLQuality {
         sqlite = new SqlLite(dbName);
         
         if (preferences.get("router", null) == null) {
-			preferences.put("router",
-					JOptionPane.showInputDialog(null, "Url estadisticas router DSL","Configuracion", JOptionPane.QUESTION_MESSAGE));
+        	String routerPath = JOptionPane.showInputDialog(null, "Url estadisticas router DSL","Configuracion", JOptionPane.QUESTION_MESSAGE,
+					null,null,"http://192.168.0.1/es_ES/diag.html").toString();
+			preferences.put("router", routerPath);					
         }        
 
-        new Timer().schedule(new TimerTask() {
+        Timer t = new Timer();
+        t.schedule(new TimerTask() {
             @Override
             public void run() {
                 try {
@@ -48,7 +49,7 @@ public class ADSLQuality {
                     Document doc = Jsoup
                             .connect(preferences.get("router", "http://192.168.0.1/es_ES/diag.html"))
                             .header("Authorization", "Basic " + base64login)
-                            .get();
+                            .get();                    
 
                     // DATOS CON ADMINISTRADOR
 //                    Element e1 = doc.getElementsContainingOwnText("SNR Margin (0.1 dB):").first().parent();
@@ -60,31 +61,41 @@ public class ADSLQuality {
 //                            Integer.parseInt(e2.child(2).text()));
 
                     // DATOS SIN ADMINISTRADOR
-                    int[] datos = new int[6];
-                    Matcher m;
-                    m = Pattern.compile(".+iStatUpNoiseMargin.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[1] = Integer.parseInt(m.group(1));
+                    boolean encontrado = false;
+                    int[] datos = new int[6];                      
+                    Matcher m1 = Pattern.compile("iStatUpNoiseMargin.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m1.find()) {
+                        datos[1] = Integer.parseInt(m1.group(1).replace(".",""));
+                        encontrado = true;
                     }
-                    m = Pattern.compile(".+iStatDownNoiseMargin.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[0] = Integer.parseInt(m.group(1));
+                    Matcher m2 = Pattern.compile("iStatDownNoiseMargin.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m2.find()) {
+                        datos[0] = Integer.parseInt(m2.group(1).replace(".",""));
+                        encontrado = true;
                     }
-                    m = Pattern.compile(".+iStatUpMaxLineSpeed.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[3] = Integer.parseInt(m.group(1));
+                    Matcher m3 = Pattern.compile("iStatUpMaxLineSpeed.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m3.find()) {
+                        datos[3] = Integer.parseInt(m3.group(1).replace(".",""));
+                        encontrado = true;
                     }
-                    m = Pattern.compile(".+iStatDownMaxLineSpeed.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[2] = Integer.parseInt(m.group(1));
+                    Matcher m4 = Pattern.compile("iStatDownMaxLineSpeed.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m4.find()) {
+                        datos[2] = Integer.parseInt(m4.group(1).replace(".",""));
+                        encontrado = true;
                     }
-                    m = Pattern.compile(".+iStatDownOutputPower.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[4] = Integer.parseInt(m.group(1));
+                    Matcher m5 = Pattern.compile("iStatDownOutputPower.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m5.find()) {
+                        datos[4] = Integer.parseInt(m5.group(1).replace(".",""));
+                        encontrado = true;
                     }
-                    m = Pattern.compile(".+iStatUpOutputPower.+'(\\d+)'.+").matcher(doc.html());
-                    if (m.find()) {
-                        datos[5] = Integer.parseInt(m.group(1));
+                    Matcher m6 = Pattern.compile("iStatUpOutputPower.+'([\\d\\.]+)'.+").matcher(doc.html());
+                    if (m6.find()) {
+                        datos[5] = Integer.parseInt(m6.group(1).replace(".",""));
+                        encontrado = true;
+                    }
+                    
+                    if (!encontrado) {
+                    	throw new Exception("Route path invalid");
                     }
                     
                     sqlite.guardaDatos(datos);
@@ -93,6 +104,8 @@ public class ADSLQuality {
                 } catch (Exception ex) {
                 	preferences.remove("router");
                 	_log.log(Level.SEVERE, null, ex);
+                	t.cancel();
+                	t.purge();
                 }
             }
         }, 1000, (long) (segundosIntervalo * 1000));
