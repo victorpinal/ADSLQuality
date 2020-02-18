@@ -1,11 +1,13 @@
 package com.victor;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,7 +20,7 @@ public class SqlLite {
 		connectionString = "jdbc:sqlite:" + System.getProperty("user.home") + File.separator + dbName;
 	}
 
-	void guardaDatos(int[] datos) {
+	void guardaDatos(HashMap<String, BigDecimal> datos) {
 		_log.entering(SqlLite.class.getName(), "guardaDatos");
 		try {
 
@@ -31,17 +33,32 @@ public class SqlLite {
 				connection = DriverManager.getConnection(connectionString);
 				connection.createStatement()
 						.executeUpdate("CREATE TABLE IF NOT EXISTS datos (" + "id INTEGER PRIMARY KEY,"
-								+ "fecha DATETIME DEFAULT CURRENT_TIMESTAMP," + "download INTEGER," + "upload INTEGER,"
-								+ "attdownrate INTEGER," + "attuprate INTEGER," + "downpower INTEGER,"
-								+ "uppower INTEGER)");
-				PreparedStatement st = connection.prepareStatement(
-						"INSERT INTO datos (download,upload,attdownrate,attuprate,downpower,uppower) VALUES (?,?,?,?,?,?)");
-				for (int i = 0; i < datos.length; i++) {
-					st.setInt(i + 1, datos[i]);
-				}
-				st.executeUpdate();
-				_log.info(String.format("%30s ---> %5d | %5d | %5d | %5d | %5d | %5d %n", new Date().toString(),
-						datos[0], datos[1], datos[2], datos[3], datos[4], datos[5]));
+								+ "fecha DATETIME DEFAULT CURRENT_TIMESTAMP," + "SNR_DL NUMERIC," + "SNR_UL NUMERIC,"
+								+ "Attenuation_DL NUMERIC," + "Attenuation_UL NUMERIC," + "Power_DL NUMERIC,"
+								+ "Power_UL NUMERIC," + "DataRate_DL NUMERIC," + "DataRate_UL NUMERIC)");
+				PreparedStatement stmt = connection.prepareStatement(
+						"INSERT INTO datos (SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL) "
+						+ "VALUES (?,?,?,?,?,?,?,?)");
+				stmt.setBigDecimal(1, datos.get(Parameters.SNR_DL));
+				stmt.setBigDecimal(2, datos.get(Parameters.SNR_UL));
+				stmt.setBigDecimal(3, datos.get(Parameters.Attenuation_DL));
+				stmt.setBigDecimal(4, datos.get(Parameters.Attenuation_UL));
+				stmt.setBigDecimal(5, datos.get(Parameters.Power_DL));
+				stmt.setBigDecimal(6, datos.get(Parameters.Power_UL));
+				stmt.setBigDecimal(7, datos.get(Parameters.DataRate_DL));
+				stmt.setBigDecimal(8, datos.get(Parameters.DataRate_UL));
+				stmt.executeUpdate();
+				_log.info(String.format(""
+						+ "%30s ->  DL         UL%n"
+						+ "                    SNR            %10s %10s%n"
+						+ "                    Attenuation    %10s %10s%n"
+						+ "                    Power          %10s %10s%n"
+						+ "                    DataRate       %10s %10s%n",
+						new Date().toString(),
+						datos.get(Parameters.SNR_DL), datos.get(Parameters.SNR_UL), 
+						datos.get(Parameters.Attenuation_DL), datos.get(Parameters.Attenuation_UL),
+						datos.get(Parameters.Power_DL), datos.get(Parameters.Power_UL), 
+						datos.get(Parameters.DataRate_DL), datos.get(Parameters.DataRate_UL)));
 			} catch (SQLException e) {
 				// if the error message is "out of memory",
 				// it probably means no database file is found

@@ -3,6 +3,7 @@ package com.victor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -11,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
@@ -30,22 +32,22 @@ public class mySQL {
 
 		// Read connection data from preferences
 		
-		if (preferences.get("servidor", null) == null || preferences.get("contrasenha", null) == null) {
-			preferences.put("servidor",
-					JOptionPane.showInputDialog(null, "Servidor MySQL","Configuracion", JOptionPane.QUESTION_MESSAGE));
-			preferences.put("puerto",
-					JOptionPane.showInputDialog(null, "Puerto", "Configuracion", JOptionPane.QUESTION_MESSAGE));
-			preferences.put("usuario",
+		if (preferences.get("mysql_server", null) == null || preferences.get("mysql_password", null) == null) {
+			preferences.put("mysql_server",
+					(String)JOptionPane.showInputDialog(null, "Servidor MySQL","Configuracion", JOptionPane.QUESTION_MESSAGE,null,null,"localhost"));
+			preferences.put("mysql_port",
+					(String)JOptionPane.showInputDialog(null, "Puerto", "Configuracion", JOptionPane.QUESTION_MESSAGE,null,null,"3306"));
+			preferences.put("mysql_user",
 					JOptionPane.showInputDialog(null, "Usuario","Configuracion", JOptionPane.QUESTION_MESSAGE));
-			preferences.put("contrasenha",
+			preferences.put("mysql_password",
 					JOptionPane.showInputDialog(null, "Contrasenha", "Configuracion", JOptionPane.QUESTION_MESSAGE));
 		}
 
 		connectionString = String.format("jdbc:mysql://%1$s:%2$s/adsl?user=%3$s&password=%4$s",
-				preferences.get("servidor", "localhost"), 
-				preferences.get("puerto", "3306"),
-				preferences.get("usuario", null), 
-				preferences.get("contrasenha", null)).toString();
+				preferences.get("mysql_server", "localhost"), 
+				preferences.get("mysql_port", "3306"),
+				preferences.get("mysql_user", null), 
+				preferences.get("mysql_password", null)).toString();
 
 		//Check for driver
 		/*
@@ -58,7 +60,7 @@ public class mySQL {
 
 	}
 
-	void guardaDatosMySQL(int[] datos) {
+	void guardaDatosMySQL(HashMap<String, BigDecimal> datos) {
 
 		int ip_id = 0;
 		String ip = "localhost";
@@ -120,11 +122,17 @@ public class mySQL {
 					rs.close();
 					stmt.close();
 					stmt = connection.prepareStatement(
-							"INSERT INTO datos (ip_id,download,upload,attdownrate,attuprate,downpower,uppower) VALUES (?,?,?,?,?,?,?)");
+							"INSERT INTO datos (ip_id,SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL) "
+							+ "VALUES (?,?,?,?,?,?,?,?,?)");
 					stmt.setInt(1, ip_id);
-					for (int i = 0; i < datos.length; i++) {
-						stmt.setInt(i + 2, datos[i]);
-					}
+					stmt.setBigDecimal(2, datos.get(Parameters.SNR_DL));
+					stmt.setBigDecimal(3, datos.get(Parameters.SNR_UL));
+					stmt.setBigDecimal(4, datos.get(Parameters.Attenuation_DL));
+					stmt.setBigDecimal(5, datos.get(Parameters.Attenuation_UL));
+					stmt.setBigDecimal(6, datos.get(Parameters.Power_DL));
+					stmt.setBigDecimal(7, datos.get(Parameters.Power_UL));
+					stmt.setBigDecimal(8, datos.get(Parameters.DataRate_DL));
+					stmt.setBigDecimal(9, datos.get(Parameters.DataRate_UL));
 					stmt.executeUpdate();
 				}
 
@@ -132,7 +140,7 @@ public class mySQL {
 				// if the error message is "out of memory",
 				// it probably means no database file is found
 				_log.log(Level.SEVERE,null, e);
-				 preferences.remove("servidor");
+				 preferences.remove("mysql_server");
 //			} catch (UnknownHostException e) {
 //				_log.log(Level.SEVERE,null, e);
 //				preferences.get("servidor", null);
