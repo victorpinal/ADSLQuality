@@ -35,10 +35,11 @@ public class SqlLite {
 						.executeUpdate("CREATE TABLE IF NOT EXISTS datos (" + "id INTEGER PRIMARY KEY,"
 								+ "fecha DATETIME DEFAULT CURRENT_TIMESTAMP," + "SNR_DL NUMERIC," + "SNR_UL NUMERIC,"
 								+ "Attenuation_DL NUMERIC," + "Attenuation_UL NUMERIC," + "Power_DL NUMERIC,"
-								+ "Power_UL NUMERIC," + "DataRate_DL NUMERIC," + "DataRate_UL NUMERIC)");
+								+ "Power_UL NUMERIC," + "DataRate_DL NUMERIC," + "DataRate_UL NUMERIC,"
+								+ "Attainable_DL NUMERIC," + "Attainable_UL NUMERIC)");
 				PreparedStatement stmt = connection.prepareStatement(
-						"INSERT INTO datos (SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL) "
-						+ "VALUES (?,?,?,?,?,?,?,?)");
+						"INSERT INTO datos (SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL,Attainable_DL,Attainable_UL) "
+						+ "VALUES (?,?,?,?,?,?,?,?,?,?)");
 				stmt.setBigDecimal(1, datos.get(Parameters.SNR_DL));
 				stmt.setBigDecimal(2, datos.get(Parameters.SNR_UL));
 				stmt.setBigDecimal(3, datos.get(Parameters.Attenuation_DL));
@@ -47,18 +48,22 @@ public class SqlLite {
 				stmt.setBigDecimal(6, datos.get(Parameters.Power_UL));
 				stmt.setBigDecimal(7, datos.get(Parameters.DataRate_DL));
 				stmt.setBigDecimal(8, datos.get(Parameters.DataRate_UL));
+				stmt.setBigDecimal(9, datos.get(Parameters.Attainable_DL));
+				stmt.setBigDecimal(10, datos.get(Parameters.Attainable_UL));
 				stmt.executeUpdate();
 				_log.info(String.format(""
 						+ "%30s ->  DL         UL%n"
 						+ "                    SNR            %10s %10s%n"
 						+ "                    Attenuation    %10s %10s%n"
 						+ "                    Power          %10s %10s%n"
-						+ "                    DataRate       %10s %10s%n",
+						+ "                    DataRate       %10s %10s%n"
+						+ "                    Attainable     %10s %10s%n",
 						new Date().toString(),
 						datos.get(Parameters.SNR_DL), datos.get(Parameters.SNR_UL), 
 						datos.get(Parameters.Attenuation_DL), datos.get(Parameters.Attenuation_UL),
 						datos.get(Parameters.Power_DL), datos.get(Parameters.Power_UL), 
-						datos.get(Parameters.DataRate_DL), datos.get(Parameters.DataRate_UL)));
+						datos.get(Parameters.DataRate_DL), datos.get(Parameters.DataRate_UL),
+						datos.get(Parameters.Attainable_DL), datos.get(Parameters.Attainable_UL)));
 			} catch (SQLException e) {
 				// if the error message is "out of memory",
 				// it probably means no database file is found

@@ -122,8 +122,8 @@ public class mySQL {
 					rs.close();
 					stmt.close();
 					stmt = connection.prepareStatement(
-							"INSERT INTO datos (ip_id,SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL) "
-							+ "VALUES (?,?,?,?,?,?,?,?,?)");
+							"INSERT INTO datos (ip_id,SNR_DL,SNR_UL,Attenuation_DL,Attenuation_UL,Power_DL,Power_UL,DataRate_DL,DataRate_UL,Attainable_DL,Attainable_UL) "
+							+ "VALUES (?,?,?,?,?,?,?,?,?,?,?)");
 					stmt.setInt(1, ip_id);
 					stmt.setBigDecimal(2, datos.get(Parameters.SNR_DL));
 					stmt.setBigDecimal(3, datos.get(Parameters.SNR_UL));
@@ -133,6 +133,8 @@ public class mySQL {
 					stmt.setBigDecimal(7, datos.get(Parameters.Power_UL));
 					stmt.setBigDecimal(8, datos.get(Parameters.DataRate_DL));
 					stmt.setBigDecimal(9, datos.get(Parameters.DataRate_UL));
+					stmt.setBigDecimal(10, datos.get(Parameters.Attainable_DL));
+					stmt.setBigDecimal(11, datos.get(Parameters.Attainable_UL));
 					stmt.executeUpdate();
 				}
 
