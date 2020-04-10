@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <form method="get">
+        <label for="ip">IP</label>
+        <select id="ip" name="ip">
+            <option value="">Selecciona IP</option>
+        </select>
+        <br>
+        <label for="ini">Fecha inicio</label>
+        <input type="date" id="ini" name="ini">
+        <label for="fin">Fecha fin</label>
+        <input type="date" id="fin" name="fin">
+        <br>
+        <input type="button" id="bRequest" value="REQUEST" />
+        <hr>
+        <table id="datos">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>TIME</th>
+                    <th>SNR_DL</th>
+                    <th>SNR_UL</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>        
+    </form>
+    <script type="text/javascript">
+    $.getJSON("http://localhost:8001/adsl/ip", function(data) {
+        var options = [];
+        $.each(data, function(index, item) {
+            options.push("<option value='" + item.ip + "'>" + item.ip + "-" + item.name + "-" + item.time + "</option>");
+        })
+        $("#ip").append(options);
+    });
+    $("#bRequest").click(function() {
+        getData($("#ip").val(), $("#ini").val(), $("#fin").val());
+    });
+
+    function getData(ip, ini, fin) {
+        $.getJSON("http://localhost:8001/adsl/datos?ip=" + ip + "&ini=" + ini + "&fin=" + fin, function(data) {
+            var options = [];
+            $.each(data, function(index, item) {
+                options.push("<tr><td>" + item.ip + "</td><td>" + item.time + "</td><td>" + item.SNR_DL + "</td><td>" + item.SNR_UL + "</td></tr>");
+            })
+            $("#datos>tbody").empty().append(options);
+        });
+    }
+    </script>
+</body>
+
+</html>
