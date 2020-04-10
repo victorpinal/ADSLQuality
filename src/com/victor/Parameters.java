@@ -1,8 +1,11 @@
 package com.victor;
 
 public interface Parameters {
-	
-	//COLUMN NAMES
+
+	// COLUMN NAMES
+	String IP = "ip";
+	String NAME = "name";
+	String TIME = "time";
 	String SNR_DL = "SNR_DL";
 	String SNR_UL = "SNR_UL";
 	String Attenuation_DL = "Attenuation_DL";
