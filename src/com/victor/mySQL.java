@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -244,7 +245,7 @@ public class mySQL {
 				datos.put(Parameters.Attainable_UL, rs.getBigDecimal(Parameters.Attainable_UL));
 				datos.put(Parameters.IP, rs.getString(Parameters.IP));
 				datos.put(Parameters.NAME, rs.getString(Parameters.NAME));
-				datos.put(Parameters.TIME, rs.getDate(Parameters.TIME));
+				datos.put(Parameters.TIME, new SimpleDateFormat().format(rs.getTimestamp(Parameters.TIME)));
 				listaDatos.add(datos);
 			}
 			rs.close();
