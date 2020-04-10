@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.util.Properties;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +17,7 @@ import com.jcraft.jsch.Session;
 
 public class SshConnectionManager2 {
 
+    private static final Logger _log = Logger.getGlobal();
     private Session session;
 
     private String username = "";
@@ -45,9 +47,9 @@ public class SshConnectionManager2 {
 	session.setConfig(config);
 	session.setPassword(password);
 
-	System.out.println("Connecting SSH to " + hostname + " - Please wait for few seconds... ");
+	_log.info(String.format("Connecting SSH to %s@%s:%s - Please wait for few seconds... ", username,password,hostname));
 	session.connect();
-	System.out.println("Connected!");
+	//System.out.println("Connected!");
     }
 
     public String runCommand(String command) throws JSchException, IOException {
@@ -63,7 +65,7 @@ public class SshConnectionManager2 {
 	channel.setCommand(command);
 	channel.setInputStream(null);
 
-	PrintStream out = new PrintStream(channel.getOutputStream());
+	//PrintStream out = new PrintStream(channel.getOutputStream());
 	InputStream in = channel.getInputStream(); // channel.getInputStream();
 
 	channel.connect();
@@ -77,7 +79,7 @@ public class SshConnectionManager2 {
 
 	channel.disconnect();
 
-	System.out.println("Finished sending commands!");
+	//System.out.println("Finished sending commands!");
 
 	return ret;
     }
@@ -87,7 +89,7 @@ public class SshConnectionManager2 {
 	byte[] buffer = new byte[1024];
 	StringBuilder strBuilder = new StringBuilder();
 
-	String line = "";
+	//String line = "";
 	while (true) {
 	    while (in.available() > 0) {
 		int i = in.read(buffer, 0, 1024);
@@ -95,12 +97,14 @@ public class SshConnectionManager2 {
 		    break;
 		}
 		strBuilder.append(new String(buffer, 0, i));
-		System.out.println(line);
+		//System.out.println(line);
 	    }
 
+	    /*
 	    if (line.contains("logout")) {
 		break;
 	    }
+	    */
 
 	    if (channel.isClosed()) {
 		break;
@@ -116,7 +120,7 @@ public class SshConnectionManager2 {
 
     public void close() {
 	session.disconnect();
-	System.out.println("Disconnected channel and session");
+	//_log.info("Disconnected channel and session");
     }
 
     public static void main(String[] args) {

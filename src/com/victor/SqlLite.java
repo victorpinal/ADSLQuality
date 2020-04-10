@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 public class SqlLite {
 
-	private static final Logger _log = Logger.getLogger(SqlLite.class.getName());
+	private static final Logger _log = Logger.getGlobal();
 	private final String connectionString;
 
 	public SqlLite(String dbName) {
@@ -21,7 +21,7 @@ public class SqlLite {
 	}
 
 	void guardaDatos(HashMap<String, BigDecimal> datos) {
-		_log.entering(SqlLite.class.getName(), "guardaDatos");
+		_log.entering(this.getClass().getName(), "guardaDatos");
 		try {
 
 			// load the sqlite-JDBC driver using the current class loader
@@ -50,20 +50,7 @@ public class SqlLite {
 				stmt.setBigDecimal(8, datos.get(Parameters.DataRate_UL));
 				stmt.setBigDecimal(9, datos.get(Parameters.Attainable_DL));
 				stmt.setBigDecimal(10, datos.get(Parameters.Attainable_UL));
-				stmt.executeUpdate();
-				_log.info(String.format(""
-						+ "%30s ->  DL         UL%n"
-						+ "                    SNR            %10s %10s%n"
-						+ "                    Attenuation    %10s %10s%n"
-						+ "                    Power          %10s %10s%n"
-						+ "                    DataRate       %10s %10s%n"
-						+ "                    Attainable     %10s %10s%n",
-						new Date().toString(),
-						datos.get(Parameters.SNR_DL), datos.get(Parameters.SNR_UL), 
-						datos.get(Parameters.Attenuation_DL), datos.get(Parameters.Attenuation_UL),
-						datos.get(Parameters.Power_DL), datos.get(Parameters.Power_UL), 
-						datos.get(Parameters.DataRate_DL), datos.get(Parameters.DataRate_UL),
-						datos.get(Parameters.Attainable_DL), datos.get(Parameters.Attainable_UL)));
+				stmt.executeUpdate();				
 			} catch (SQLException e) {
 				// if the error message is "out of memory",
 				// it probably means no database file is found
@@ -81,7 +68,7 @@ public class SqlLite {
 		} catch (ClassNotFoundException ex) {
 			_log.log(Level.SEVERE, "Driver no encontrado", ex);
 		}
-		_log.exiting(SqlLite.class.getName(), "guardaDatos");
+		_log.exiting(this.getClass().getName(), "guardaDatos");
 
 	}
 

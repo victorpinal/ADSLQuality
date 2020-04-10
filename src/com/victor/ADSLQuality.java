@@ -5,15 +5,19 @@
  */
 package com.victor;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
@@ -21,6 +25,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.JOptionPane;
 
+import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -30,20 +35,38 @@ import org.jsoup.nodes.Document;
  */
 public class ADSLQuality {
 
-    private static final Logger _log = Logger.getLogger(ADSLQuality.class.getName());
-    private Preferences preferences = Preferences.userNodeForPackage(ADSLQuality.class);
+    private static final Logger _log = Logger.getGlobal();    
+    private String _router_ip;
+    private String _user;
+    private String _pass;
 
     public ADSLQuality(String dbName, int segundosIntervalo) {
+
+	// INIT LOGGER
+	try {
+	    // This block configure the logger with handler and formatter
+	    FileHandler fh = new FileHandler(System.getProperty("user.home") + File.separator + ADSLQuality.class.getName() + ".log");
+	    fh.setFormatter(new SimpleFormatter());
+	    _log.addHandler(fh);
+	} catch (SecurityException e) {
+	    e.printStackTrace();
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
+
+	_log.entering(this.getClass().getName(), "ADSLQuality");
 
 	// INIT DATABASES
 	mySQL mysql = new mySQL();
 	SqlLite sqlite = new SqlLite(dbName);
 
 	// SAVED PREFERENCES
-	int router_type = Integer.parseInt(getPreference("Type router (1.Huawei HG556a|2.Linksys WAG54G2|3.Router Jazztel)", "router_type", "1"));
-	String router_ip = getPreference("IP router", "router_ip", "192.168.0.1");
-	String user = getPreference("Router user", "router_user", "admin");
-	String pass = getPreference("Router password", "router_password", "admin");
+	int router_type = Integer.parseInt(PreferencesManager.getPreference("Router Type (1.Huawei HG556a|2.Linksys WAG54G2|3.Router Jazztel)", "router_type", "1"));
+	_router_ip = PreferencesManager.getPreference("Router ip", "router_ip", "192.168.0.1");
+	_user = PreferencesManager.getPreference("Router user", "router_user", "admin");
+	_pass = PreferencesManager.getPreference("Router password", "router_password", "admin");
+
+	_log.info(String.format("Prefrences: router_type <%d>, <%s@%s:%s>", router_type, _user, _pass,_router_ip));
 
 	// START TIMER
 	Timer t = new Timer();
@@ -54,67 +77,73 @@ public class ADSLQuality {
 		    HashMap<String, BigDecimal> datos = null;
 		    switch (router_type) {
 		    case 1:
-			datos = getDataVodafone(router_ip, user, pass);
+			datos = getDataVodafone();
 			break;
 		    case 2:
-			datos = getDataLinksys(router_ip, user, pass);
+			datos = getDataLinksys();
 			break;
 		    case 3:
-			datos = getDataJazztel_SSH2(router_ip, user, pass);
+			datos = getDataJazztel_SSH2();
 			break;
 		    }
 		    if (datos != null && !datos.isEmpty()) {
 			sqlite.guardaDatos(datos);
 			mysql.guardaDatosMySQL(datos);
+			_log.info(String.format("%30s SNR %s/%s ATTENUATION %s/%s POWER %s/%s RATE %s/%s ATTAINABLE %s/%s",
+				new Date().toString(),
+				datos.get(Parameters.SNR_DL), datos.get(Parameters.SNR_UL), 
+				datos.get(Parameters.Attenuation_DL), datos.get(Parameters.Attenuation_UL),
+				datos.get(Parameters.Power_DL), datos.get(Parameters.Power_UL), 
+				datos.get(Parameters.DataRate_DL), datos.get(Parameters.DataRate_UL),
+				datos.get(Parameters.Attainable_DL), datos.get(Parameters.Attainable_UL)));
+		    } else {
+			_log.warning("Datos empty!");
 		    }
 		} catch (HttpStatusException ex) {
 		    _log.log(Level.SEVERE, null, ex);
 		} catch (Exception ex) {
-		    try {
-			preferences.clear();
-		    } catch (BackingStoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		    }
+		    /*
+		     * try { preferences.clear(); } catch (BackingStoreException e) {
+		     * e.printStackTrace(); }
+		     */
 		    _log.log(Level.SEVERE, null, ex);
 		    t.cancel();
 		    t.purge();
 		}
 	    }
 	}, 1000, (long) (segundosIntervalo * 1000));
+	
+	_log.exiting(this.getClass().getName(), "ADSLQuality");
 
     }
 
-    private String getPreference(String message, String name, String def_value) {
-	String value = preferences.get(name, null);
-	if (value == null) {
-	    value = JOptionPane.showInputDialog(null, message, "Configuracion", JOptionPane.QUESTION_MESSAGE, null, null, def_value).toString();
-	    preferences.put(name, value);
-	}
-	return value;
-    }
+    
 
     private String getBase64login(String user, String pass) {
 	String login = user + ":" + pass;
 	String b64login = Base64.getEncoder().encodeToString(login.getBytes());
-	System.out.println("router login b64:" + b64login);
 	return b64login;
     }
 
-    private HashMap<String, BigDecimal> getDataVodafone(String ip, String user, String pass) throws Exception {
+    private Document getHTML(String urlRouter) throws IOException {
+	String url = String.format(urlRouter, _router_ip);
+	Connection con = Jsoup.connect(url).header("Authorization", "Basic " + getBase64login(_user, _pass));
+	_log.info(con.request().toString());
+	try {
+	    return con.get();
+	} catch (HttpStatusException e) {
+	    return con.get();
+	}
+    }
 
-	String path = "/es_ES/diag.html"; // VODAFONE
-	Document doc = Jsoup.connect("http://" + ip + path).header("Authorization", "Basic " + getBase64login(user, pass)).get();
-
-	// DATOS CON ADMINISTRADOR
-//        Element e1 = doc.getElementsContainingOwnText("SNR Margin (0.1 dB):").first().parent();
-//        Element e2 = doc.getElementsContainingOwnText("Attainable Rate (Kbps):").first().parent().parent();
-//
-//        guardaDatos(Integer.parseInt(e1.child(1).text()),
-//                Integer.parseInt(e1.child(2).text()),
-//                Integer.parseInt(e2.child(1).text()),
-//                Integer.parseInt(e2.child(2).text()));
-
+    private HashMap<String, BigDecimal> getDataVodafone() throws Exception {	
+	_log.entering(this.getClass().getName(), "getDataVodafone");
+	Document doc = getHTML("http://%s/es_ES/diag.html"); // VODAFONE
+	/* DATOS CON ADMINISTRADOR
+        Element e1 = doc.getElementsContainingOwnText("SNR Margin (0.1 dB):").first().parent();
+        Element e2 = doc.getElementsContainingOwnText("Attainable Rate (Kbps):").first().parent().parent();
+        guardaDatos(Integer.parseInt(e1.child(1).text()), Integer.parseInt(e1.child(2).text()), Integer.parseInt(e2.child(1).text()), Integer.parseInt(e2.child(2).text()));
+        */
 	// DATOS SIN ADMINISTRADOR
 	boolean encontrado = false;
 	HashMap<String, BigDecimal> datos = new HashMap<>();
@@ -148,24 +177,16 @@ public class ADSLQuality {
 	    datos.put(Parameters.Power_UL, new BigDecimal(m6.group(1)));
 	    encontrado = true;
 	}
-
 	if (!encontrado) {
 	    throw new Exception("Route path invalid");
 	}
-
+	_log.exiting(this.getClass().getName(), "getDataVodafone");
 	return datos;
     }
 
-    private HashMap<String, BigDecimal> getDataLinksys(String ip, String user, String pass) throws Exception {
-
-	String path = "/setup.cgi?next_file=adsl_driver.htm"; // CISCO LYNKSYS
-	Document doc = null;
-	try {
-	    doc = Jsoup.connect("http://" + ip + path).header("Authorization", "Basic " + getBase64login(user, pass)).get();
-	} catch (HttpStatusException e) {
-	    doc = Jsoup.connect("http://" + ip + path).header("Authorization", "Basic " + getBase64login(user, pass)).get();
-	}
-
+    private HashMap<String, BigDecimal> getDataLinksys() throws Exception {
+	_log.entering(this.getClass().getName(), "getDataLinksys");
+	Document doc = getHTML("http://%s/setup.cgi?next_file=adsl_driver.htm"); // CISCO LYNKSYS	
 	boolean encontrado = false;
 	BigDecimal divisor_MB = new BigDecimal(1024);
 	HashMap<String, BigDecimal> datos = new HashMap<>();
@@ -205,7 +226,7 @@ public class ADSLQuality {
 	if (!encontrado) {
 	    throw new Exception("Route path invalid");
 	}
-
+	_log.exiting(this.getClass().getName(), "getDataLinksys");
 	return datos;
     }
 
@@ -217,61 +238,78 @@ public class ADSLQuality {
      * @return
      * @throws Exception
      */
-    private HashMap<String, BigDecimal> getDataJazztel_HTML(String ip, String user, String pass) throws Exception {
-
-	String path = "/cgi-bin/status_deviceinfo.asp"; // CISCO LYNKSYS
-	Document doc = null;
-	try {
-	    doc = Jsoup.connect("http://" + ip + path).header("Authorization", "Basic " + getBase64login(user, pass)).get();
-	} catch (HttpStatusException e) {
-	    doc = Jsoup.connect("http://" + ip + path).header("Authorization", "Basic " + getBase64login(user, pass)).get();
-	}
-
+    private HashMap<String, BigDecimal> getDataJazztel_HTML() throws Exception {
+	_log.entering(this.getClass().getName(), "getDataJazztel_HTML");
+	Document doc = getHTML("http://%s/cgi-bin/status_deviceinfo.asp"); // COMTREND ARxxxx JAZZTEL
 	String DownNoiseMargin = doc.select("body > form > table.tabdata > tbody > tr:nth-child(10) > td:nth-child(5)").first().text();
 	String UpNoiseMargin = doc.select("body > form > table.tabdata > tbody > tr:nth-child(10) > td:nth-child(6)").first().text();
 	String DownMaxLineSpeed = doc.select("body > form > table.tabdata > tbody > tr:nth-child(12) > td:nth-child(5)").first().text();
 	String UpMaxLineSpeed = doc.select("body > form > table.tabdata > tbody > tr:nth-child(12) > td:nth-child(6)").first().text();
 	String DownOutputPower = doc.select("body > form > table.tabdata > tbody > tr:nth-child(14) > td:nth-child(5)").first().text();
 	String UpOutputPower = doc.select("body > form > table.tabdata > tbody > tr:nth-child(14) > td:nth-child(6)").first().text();
-	int[] datos = new int[6];
-	datos[0] = Integer.parseInt(DownNoiseMargin.split(" ")[0].replace(".", ""));
-	datos[1] = Integer.parseInt(UpNoiseMargin.split(" ")[0].replace(".", ""));
-	datos[2] = Integer.parseInt(DownMaxLineSpeed.split(" ")[0].replace(".", ""));
-	datos[3] = Integer.parseInt(UpMaxLineSpeed.split(" ")[0].replace(".", ""));
-	datos[4] = Integer.parseInt(DownOutputPower.split(" ")[0].replace(".", ""));
-	datos[5] = Integer.parseInt(UpOutputPower.split(" ")[0].replace(".", ""));
-	return null;
+	HashMap<String, BigDecimal> datos = new HashMap<>();
+	datos.put(Parameters.SNR_DL, new BigDecimal(DownNoiseMargin.split(" ")[0].replace(".", "")));
+	datos.put(Parameters.SNR_UL, new BigDecimal(UpNoiseMargin.split(" ")[0].replace(".", "")));
+	datos.put(Parameters.DataRate_DL, new BigDecimal(DownMaxLineSpeed.split(" ")[0].replace(".", "")));
+	datos.put(Parameters.DataRate_UL, new BigDecimal(UpMaxLineSpeed.split(" ")[0].replace(".", "")));
+	datos.put(Parameters.Power_DL, new BigDecimal(DownOutputPower.split(" ")[0].replace(".", "")));
+	datos.put(Parameters.Power_UL, new BigDecimal(UpOutputPower.split(" ")[0].replace(".", "")));
+	_log.exiting(this.getClass().getName(), "getDataJazztel_HTML");
+	return datos;
     }
 
-    private HashMap<String, BigDecimal> getDataJazztel_SSH2(String ip, String user, String pass) throws Exception {
-
-	String command = "/userfs/bin/tcapi staticGet \"Info_Adsl\" ";
+    private HashMap<String, BigDecimal> getDataJazztel_SSH2() throws Exception {
+	_log.entering(this.getClass().getName(), "getDataJazztel_SSH2");
+	String command = "/userfs/bin/tcapi staticGet \"Info_Adsl\" ";	// COMTREND ARxxxx JAZZTEL
 	HashMap<String, BigDecimal> datos = new HashMap<>();
-	Pattern regex = Pattern.compile("([\\d.]+).*",Pattern.DOTALL);
+	Pattern regex = Pattern.compile("([\\d.]+).*", Pattern.DOTALL);
 	Matcher m;
-	SshConnectionManager2 ssh = new SshConnectionManager2(ip, user, pass);
+	SshConnectionManager2 ssh = new SshConnectionManager2(_router_ip, _user, _pass);
 	ssh.open();
+	
 	m = regex.matcher(ssh.runCommand(command + "\"SNRMarginDown\""));
-	if (m.find()) { datos.put(Parameters.SNR_DL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.SNR_DL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"SNRMarginUp\""));
-	if (m.find()) { datos.put(Parameters.SNR_UL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.SNR_UL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"AttenDown\""));
-	if (m.find()) { datos.put(Parameters.Attenuation_DL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Attenuation_DL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"AttenUp\""));
-	if (m.find()) { datos.put(Parameters.Attenuation_UL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Attenuation_UL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"DataRateDown\""));
-	if (m.find()) { datos.put(Parameters.DataRate_DL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.DataRate_DL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"DataRateUp\""));
-	if (m.find()) { datos.put(Parameters.DataRate_UL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.DataRate_UL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"PowerDown\""));
-	if (m.find()) { datos.put(Parameters.Power_DL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Power_DL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"PowerUp\""));
-	if (m.find()) { datos.put(Parameters.Power_UL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Power_UL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"AttainDown\""));
-	if (m.find()) { datos.put(Parameters.Attainable_DL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Attainable_DL, new BigDecimal(m.group(1)));
+	}
 	m = regex.matcher(ssh.runCommand(command + "\"AttainUp\""));
-	if (m.find()) { datos.put(Parameters.Attainable_UL, new BigDecimal(m.group(1))); }
+	if (m.find()) {
+	    datos.put(Parameters.Attainable_UL, new BigDecimal(m.group(1)));
+	}
+	
 	ssh.close();
+	_log.exiting(this.getClass().getName(), "getDataJazztel_SSH2");
 	return datos;
     }
 
@@ -280,9 +318,9 @@ public class ADSLQuality {
      */
     public static void main(String[] args) {
 	if (args.length > 0) {
-	    new ADSLQuality("sample-debug.db", 5);
+	    new ADSLQuality("sample-debug.db", 5); // DEBUG CONSULTA CADA 5s
 	} else {
-	    new ADSLQuality("sample.db", 1800);
+	    new ADSLQuality("sample.db", 1800); // CONSULTA CADA 30 minutos (1800 s)
 	}
 
     }
