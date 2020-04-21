@@ -1,7 +1,6 @@
 package com.victor;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,8 +11,10 @@ import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.logging.Logger;
+import java.util.zip.Adler32;
 
 import com.google.gson.Gson;
+import com.jcraft.jsch.JSchException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;;
@@ -28,6 +29,7 @@ public class RESTServer {
 		try {
 			server = HttpServer.create(new InetSocketAddress("localhost", 8001), 0);
 			ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+			server.createContext("/adsl/reset", new MyHttpHandlerReset());
 			server.createContext("/adsl/datos", new MyHttpHandlerDatos());
 			server.createContext("/adsl/ip", new MyHttpHandlerIp());
 			server.createContext("/adsl", new MyHttpHandlerIndex());
@@ -131,6 +133,42 @@ public class RESTServer {
 			outputStream.close();
 		}
 
+	}
+	
+	private class MyHttpHandlerReset extends MyHttpHandler {
+
+		@Override
+		protected HashMap<String, String> handleGetRequest(HttpExchange httpExchange) {
+			return null;
+		}
+
+		@Override
+		protected void handleResponse(HttpExchange httpExchange, HashMap<String, String> requestParams) throws IOException {
+			_log.info("RESET server BEGIN");
+			String _router_ip = PreferencesManager.getPreference("Router ip", "router_ip", "192.168.0.1");
+			String _user = PreferencesManager.getPreference("Router user", "router_user", "admin");
+			String _pass = PreferencesManager.getPreference("Router password", "router_password", "admin");
+			String command = "wan adsl reset"; // COMTREND ARxxxx JAZZTEL
+			SshConnectionManager2 ssh = new SshConnectionManager2(_router_ip, _user, _pass);
+			//Ejecutamos el comando
+			try {
+				ssh.open();
+				ssh.runCommand(command);
+			} catch (JSchException e) {
+				e.printStackTrace();
+			} finally {
+				ssh.close();
+			}
+			//Escribimos el resultado
+			OutputStream outputStream = httpExchange.getResponseBody();			
+			String htmlResponse =  new Gson().toJson("OK");
+			httpExchange.sendResponseHeaders(200, htmlResponse.length());
+			outputStream.write(htmlResponse.getBytes());
+			outputStream.flush();
+			outputStream.close();
+			_log.info("RESET server END");
+		}
+		
 	}
 	
 	public static void main(String[] args) {

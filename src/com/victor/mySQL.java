@@ -165,7 +165,7 @@ public class mySQL {
 				HashMap<String, Object> datos = new HashMap<>();
 				datos.put(Parameters.IP, rs.getString(Parameters.IP));
 				datos.put(Parameters.NAME, rs.getString(Parameters.NAME));
-				datos.put(Parameters.TIME, rs.getDate(Parameters.TIME));
+				datos.put(Parameters.TIME, rs.getTimestamp(Parameters.TIME).getTime());
 				listaDatos.add(datos);
 			}
 			rs.close();
@@ -245,7 +245,7 @@ public class mySQL {
 				datos.put(Parameters.Attainable_UL, rs.getBigDecimal(Parameters.Attainable_UL));
 				datos.put(Parameters.IP, rs.getString(Parameters.IP));
 				datos.put(Parameters.NAME, rs.getString(Parameters.NAME));
-				datos.put(Parameters.TIME, new SimpleDateFormat().format(rs.getTimestamp(Parameters.TIME)));
+				datos.put(Parameters.TIME, rs.getTimestamp(Parameters.TIME).getTime());
 				listaDatos.add(datos);
 			}
 			rs.close();
