@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.logging.Logger;
-import java.util.zip.Adler32;
 
 import com.google.gson.Gson;
 import com.jcraft.jsch.JSchException;
