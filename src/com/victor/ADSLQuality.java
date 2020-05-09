@@ -35,75 +35,94 @@ public class ADSLQuality {
 	private String _router_ip;
 	private String _user;
 	private String _pass;
+	private int router_type;
+	private mySQL mysql;
+	private SqlLite sqlite;
+	
+	public ADSLQuality() {
+		this(null);
+	}
 
-	public ADSLQuality(String dbName, int segundosIntervalo) {		
+	public ADSLQuality(String dbNameSqLite) {		
 
 		_log.entering(this.getClass().getName(), "ADSLQuality");
 
 		// INIT DATABASES
-		mySQL mysql = new mySQL();
-		SqlLite sqlite = new SqlLite(dbName);
+		mysql = new mySQL();
+		if (dbNameSqLite!=null) {
+			sqlite = new SqlLite(dbNameSqLite);
+		}
 
-		// SAVED PREFERENCES
-		int router_type = Integer.parseInt(PreferencesManager.getPreference("Router Type (1.Huawei HG556a|2.Linksys WAG54G2|3.Router Jazztel)", "router_type", "1"));
+		// SAVED PREFERENCES		
+		router_type = Integer.parseInt(PreferencesManager.getPreference("Router Type (1.Huawei HG556a|2.Linksys WAG54G2|3.Router Jazztel)", "router_type", "1"));				
 		_router_ip = PreferencesManager.getPreference("Router ip", "router_ip", "192.168.0.1");
 		_user = PreferencesManager.getPreference("Router user", "router_user", "admin");
-		_pass = PreferencesManager.getPreference("Router password", "router_password", "admin");
-
+		_pass = PreferencesManager.getPreference("Router password", "router_password", "admin");		
 		_log.info(String.format("Prefrences: router_type <%d>, <%s@%s:%s>", router_type, _user, _pass, _router_ip));
-
+		
+		_log.exiting(this.getClass().getName(), "ADSLQuality");
+	}
+	
+	public void bgExecute(int segundosIntervalo) {
 		// START TIMER
 		Timer t = new Timer();
 		t.schedule(new TimerTask() {
 			@Override
 			public void run() {
 				try {
-					HashMap<String, BigDecimal> datos = null;
-					switch (router_type) {
-					case 1:
-						datos = getDataVodafone();
-						break;
-					case 2:
-						datos = getDataLinksys();
-						break;
-					case 3:
-						datos = getDataJazztel_SSH2();
-						break;
-					}
-					if (datos != null && !datos.isEmpty()) {
-						sqlite.guardaDatos(datos);
-						mysql.guardaDatos(datos);
-						_log.info(String.format("%30s SNR %s/%s ATTENUATION %s/%s POWER %s/%s RATE %s/%s ATTAINABLE %s/%s", 
-								new Date().toString(), 
-								datos.get(Parameters.SNR_DL),
-						        datos.get(Parameters.SNR_UL), 
-						        datos.get(Parameters.Attenuation_DL), 
-						        datos.get(Parameters.Attenuation_UL), 
-						        datos.get(Parameters.Power_DL),
-						        datos.get(Parameters.Power_UL), 
-						        datos.get(Parameters.DataRate_DL), 
-						        datos.get(Parameters.DataRate_UL), 
-						        datos.get(Parameters.Attainable_DL),
-						        datos.get(Parameters.Attainable_UL)));
-					} else {
-						_log.warning("Datos empty!");
-					}
-				} catch (HttpStatusException ex) {
-					_log.log(Level.SEVERE, null, ex);
-				} catch (Exception ex) {
-					/*
-					 * try { preferences.clear(); } catch (BackingStoreException e) {
-					 * e.printStackTrace(); }
-					 */
-					_log.log(Level.SEVERE, null, ex);
+					execute();
+				} catch (Exception e) {
 					t.cancel();
 					t.purge();
-				}
+				}		
 			}
 		}, 1000, (long) (segundosIntervalo * 1000));
-		
-		_log.exiting(this.getClass().getName(), "ADSLQuality");
-
+	}
+	
+	public void execute() throws Exception {
+		try {
+			HashMap<String, BigDecimal> datos = null;			
+			switch (router_type) {
+			case 1:
+				datos = getDataVodafone();
+				break;
+			case 2:
+				datos = getDataLinksys();
+				break;
+			case 3:
+				datos = getDataJazztel_SSH2();
+				break;
+			}
+			if (datos != null && !datos.isEmpty()) {
+				if (sqlite!=null) {
+					sqlite.guardaDatos(datos);
+				}
+				mysql.guardaDatos(datos);				
+				_log.info(String.format("%30s SNR %s/%s ATTENUATION %s/%s POWER %s/%s RATE %s/%s ATTAINABLE %s/%s", 
+						new Date().toString(), 
+						datos.get(Parameters.SNR_DL),
+				        datos.get(Parameters.SNR_UL), 
+				        datos.get(Parameters.Attenuation_DL), 
+				        datos.get(Parameters.Attenuation_UL), 
+				        datos.get(Parameters.Power_DL),
+				        datos.get(Parameters.Power_UL), 
+				        datos.get(Parameters.DataRate_DL), 
+				        datos.get(Parameters.DataRate_UL), 
+				        datos.get(Parameters.Attainable_DL),
+				        datos.get(Parameters.Attainable_UL)));
+			} else {
+				_log.warning("Datos empty!");
+			}
+		} catch (HttpStatusException ex) {
+			_log.log(Level.SEVERE, null, ex);
+		} catch (Exception ex) {
+			/*
+			 * try { preferences.clear(); } catch (BackingStoreException e) {
+			 * e.printStackTrace(); }
+			 */
+			_log.log(Level.SEVERE, null, ex);
+			throw ex;
+		}
 	}
 
 	private String getBase64login(String user, String pass) {
@@ -326,9 +345,9 @@ public class ADSLQuality {
 		
 		// INIT ADSL 
     	if (args.length > 0) {
-    	    new ADSLQuality("sample-debug.db", 5); // DEBUG CONSULTA CADA 5s
+    	    new ADSLQuality("sample-debug.db").bgExecute(5); // DEBUG CONSULTA CADA 5s
     	} else {
-    	    new ADSLQuality("sample.db", 1800); // CONSULTA CADA 30 minutos (1800 s)
+    	    new ADSLQuality("sample.db").bgExecute(1800); // CONSULTA CADA 30 minutos (1800 s)
     	}    	
     }
 

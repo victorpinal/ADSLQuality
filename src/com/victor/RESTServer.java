@@ -28,13 +28,19 @@ public class RESTServer {
 		try {
 			server = HttpServer.create(new InetSocketAddress("localhost", 8001), 0);
 			ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+			server.createContext("/adsl/read", new MyHttpHandlerRead());
 			server.createContext("/adsl/reset", new MyHttpHandlerReset());
 			server.createContext("/adsl/datos", new MyHttpHandlerDatos());
 			server.createContext("/adsl/ip", new MyHttpHandlerIp());
 			server.createContext("/adsl", new MyHttpHandlerIndex());
 			server.setExecutor(threadPoolExecutor);
 			server.start();
-			_log.info("HTTP Server started on port 8001. http://localhost:8001/adsl/[ip|datos[?ip=|ini=|fin=]]");
+			_log.info("HTTP Server started on port 8001.\n"
+					+ "http://localhost:8001/adsl                       (index)\n"
+					+ "http://localhost:8001/adsl/ip                    (get historical ip)\n"
+					+ "http://localhost:8001/adsl/datos[?ip=|ini=|fin=] (get data)\n"
+					+ "http://localhost:8001/adsl/read                  (query router)\n"
+					+ "http://localhost:8001/adsl/reset                 (reset adsl)");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -144,6 +150,7 @@ public class RESTServer {
 		@Override
 		protected void handleResponse(HttpExchange httpExchange, HashMap<String, String> requestParams) throws IOException {
 			_log.info("RESET server BEGIN");
+			String resultado = "OK";
 			String _router_ip = PreferencesManager.getPreference("Router ip", "router_ip", "192.168.0.1");
 			String _user = PreferencesManager.getPreference("Router user", "router_user", "admin");
 			String _pass = PreferencesManager.getPreference("Router password", "router_password", "admin");
@@ -155,17 +162,48 @@ public class RESTServer {
 				ssh.runCommand(command);
 			} catch (JSchException e) {
 				e.printStackTrace();
+				resultado = "KO";
 			} finally {
 				ssh.close();
+				//Escribimos el resultado
+				OutputStream outputStream = httpExchange.getResponseBody();			
+				String htmlResponse =  new Gson().toJson(resultado);
+				httpExchange.sendResponseHeaders(200, htmlResponse.length());
+				outputStream.write(htmlResponse.getBytes());
+				outputStream.flush();
+				outputStream.close();
 			}
-			//Escribimos el resultado
-			OutputStream outputStream = httpExchange.getResponseBody();			
-			String htmlResponse =  new Gson().toJson("OK");
-			httpExchange.sendResponseHeaders(200, htmlResponse.length());
-			outputStream.write(htmlResponse.getBytes());
-			outputStream.flush();
-			outputStream.close();
 			_log.info("RESET server END");
+		}
+		
+	}
+	
+	private class MyHttpHandlerRead extends MyHttpHandler {
+
+		@Override
+		protected HashMap<String, String> handleGetRequest(HttpExchange httpExchange) {
+			return null;
+		}
+
+		@Override
+		protected void handleResponse(HttpExchange httpExchange, HashMap<String, String> requestParams) throws IOException {
+			_log.info("READ server BEGIN");
+			String resultado = "OK";
+			try {
+				new ADSLQuality().execute();
+			} catch (Exception e) {
+				e.printStackTrace();
+				resultado = "KO";
+			} finally {
+				//Escribimos el resultado
+				OutputStream outputStream = httpExchange.getResponseBody();			
+				String htmlResponse =  new Gson().toJson(resultado);
+				httpExchange.sendResponseHeaders(200, htmlResponse.length());
+				outputStream.write(htmlResponse.getBytes());
+				outputStream.flush();
+				outputStream.close();
+			}
+			_log.info("READ server END");
 		}
 		
 	}
